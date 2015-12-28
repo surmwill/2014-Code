@@ -1,8 +1,8 @@
 /******************************************************************************
  * 
- * 	Sprockets 1956
+ * 	Sprockets 2014
  * 	Authors: 	William Surmak
- * Last Updated:	07/01/2014
+ * 	Last Updated:	07/01/2014
  * 
  ******************************************************************************/
 
@@ -15,7 +15,7 @@
 class SimpleTracker : public SimpleRobot
 {
     // Local variables
-	DRIVEMOTOR *flMotor; // Left-front drive motor
+    DRIVEMOTOR *flMotor; // Left-front drive motor
     DRIVEMOTOR *frMotor; // Left-rear drive motor
     DRIVEMOTOR *rlMotor; // Right-front drive motor
     DRIVEMOTOR *rrMotor; // Right-rear drive motor
@@ -73,8 +73,8 @@ class SimpleTracker : public SimpleRobot
 		shooterMotorTwo = new Talon(SHOOTERPORTTWO);
 		
 	    AxisCamera &camera = AxisCamera::GetInstance();
-//	    
-//	    // Set the camera's preferences
+	    
+	    // Set the camera's preferences
 	    camera.WriteResolution(camera.kResolution_320x240); // Make sure this resolution matches the width and height macros
 	    camera.WriteCompression(0);
 	    camera.WriteBrightness(50);
@@ -87,7 +87,7 @@ class SimpleTracker : public SimpleRobot
 	    gyro->Reset();
 	    gyro->SetSensitivity(0.08);
 	}
-	//adnaan is best cod 1v1 quickscope me bro
+	
 	
     /* Code to run while in tele-op, or driver-controlled  mode. */
 	void OperatorControl(void)
@@ -130,10 +130,7 @@ class SimpleTracker : public SimpleRobot
 //			DISPLAYPRINTF(4, "RR %d", rrEncoderValue);
 			DISPLAYPRINTF(6, "gyroD %0.3f", gyroAngle);
 			
-			if(downSwitch->Get()) DISPLAYPRINTF(5, "No");
-			
 			led->Set(Relay::kForward);
-			
 			
 //			DISPLAYPRINTF(1, "rrRPM %f", rrMotor->Get());
 //			DISPLAYPRINTF(2, "rlRPM %f", rlMotor->Get());
@@ -152,36 +149,43 @@ class SimpleTracker : public SimpleRobot
 //			rrEncoderValue = rrEncoder->Get();
 //			rlEncoderValue = rlEncoder->Get();
 		
-			
+			// Get our gyro angle and correct it
 			gyroAngle = gyro->GetAngle();
 			gyroAngle *= 12.85;
 			
+			// convert to radians
 			frontGyroAngle = (gyroAngle / 180) * Pi;
 			frontCorrection = frontGyroAngle;
 			
+			// If there is no enough movment on the joystick disregard the command
 			if(leftY < JOYSTICKDEADBAND && leftY > -JOYSTICKDEADBAND)leftY = 0;
 			if(leftX < JOYSTICKDEADBAND && leftX > -JOYSTICKDEADBAND)leftX = 0;
 			if(rotation < JOYSTICKDEADBAND && rotation > -JOYSTICKDEADBAND) rotation = 0;
 			
-     		magnitude = sqrt((leftY * leftY) + (leftX * leftX));
+			// calculate the magnitude, direction, and rotation
+     			magnitude = sqrt((leftY * leftY) + (leftX * leftX));
 			direction = leftStick->GetDirectionRadians();
 			rotation = rightStick->GetRawAxis(1);
 			
+			// if we are trying to just go forward use front correction to ensure a straight line
 			if(sqrt(rotation *rotation) < 0.1)
 			{
 				frontCorrection = sin(frontGyroAngle);
 			}
+			// otherwise allow the robot to torate freely
 			else
 			{
 				frontCorrection = 0;
 				gyro->Reset();
 			}
 			
+			//set the wheel speeds
 			flWheelSpeed = (magnitude * sin(direction - (Pi /4)) + rotation) - frontCorrection;
 			frWheelSpeed = (magnitude * cos(direction - (Pi /4)) + rotation)- frontCorrection;
 			rlWheelSpeed = (magnitude * -cos(direction - (Pi /4)) + rotation)- frontCorrection;
 			rrWheelSpeed = (magnitude * -sin(direction - (Pi /4)) + rotation)- frontCorrection;
 			
+			//ensure we never go over 100% power
 			if(flWheelSpeed > 1) flWheelSpeed = 1;
 			if(frWheelSpeed > 1) frWheelSpeed = 1;
 			if(rrWheelSpeed > 1) rrWheelSpeed = 1;
@@ -197,6 +201,7 @@ class SimpleTracker : public SimpleRobot
 //			frMotor->Set((leftStick->GetRawAxis(2)));
 //			rlMotor->Set((rightStick->GetRawAxis(2)));
 			
+			//set the wheel speed
 			flMotor->Set(flWheelSpeed * flMultiplier);
 			frMotor->Set(frWheelSpeed * frMultiplier);
 			rlMotor->Set(rlWheelSpeed * rlMultiplier);
@@ -281,7 +286,7 @@ class SimpleTracker : public SimpleRobot
 			CLEARMESSAGE;
 			AxisCamera &camera = AxisCamera::GetInstance();
 			
-			
+			// If we don't have a target, look for one while moving forward
 			if(shootFlag == 0) 
 			{
 				distinctParticless = GetProcessedImage(camera);
@@ -292,6 +297,7 @@ class SimpleTracker : public SimpleRobot
 				}
 			}
 			
+			//If we found the target move a little closer and prepare to shoot
 			if(distinctParticless >= 2 && shootFlag == 0)
 			{
 				shootFlag = 1;
@@ -305,6 +311,7 @@ class SimpleTracker : public SimpleRobot
 			gyroAngle = gyro->GetAngle();
 			gyroAngle *= 12.85;
 			
+			// after moving shoot the ball
 			if(shootFlag == 1 && moveCycles < 1 && particleFlag == 0)
 			{
 				shooterMotorOne->Set(0.3f);
@@ -315,7 +322,8 @@ class SimpleTracker : public SimpleRobot
 				frMotor->Set(0.0f);
 				flMotor->Set(0.0f);
 			}
-
+			
+			// Rewind the shooter after the shot
 			if(shooterSwitch->Get() || particleFlag == 1)
 			{
 				shooterMotorOne->Set(0.0f);
@@ -323,6 +331,8 @@ class SimpleTracker : public SimpleRobot
 				particleFlag = 1;
 
 			}
+			
+			// drive forward if needed
 			if(moveCycles > 0)
 			{
 				
@@ -342,6 +352,8 @@ class SimpleTracker : public SimpleRobot
 				
 				moveCycles--;
 			}
+			
+			// once we are done moving stop
 			if(moveCycles <= 1)
 			{
 				frMotor->Set(0.0f);
